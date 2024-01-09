@@ -20,7 +20,9 @@ bindgen \
     --use-core \
     --merge-extern-blocks \
     --sort-semantically \
-    --output cuviddec.rs ../headers/cuviddec.h
+    --dynamic-loading Cuviddec \
+    --output cuviddec.rs \
+    ../headers/cuviddec.h -- -I/usr/local/cuda/include
 
 bindgen \
     --allowlist-type CU.* \
@@ -43,7 +45,8 @@ bindgen \
     --use-core \
     --merge-extern-blocks \
     --sort-semantically \
-    --output nvcuvid.rs ../headers/nvcuvid.h
+    --dynamic-loading Cuvid \
+    --output nvcuvid.rs ../headers/nvcuvid.h -- -I/usr/local/cuda/include
 
 bindgen \
     --allowlist-type NVENC.* \
@@ -71,7 +74,8 @@ bindgen \
     --use-core \
     --merge-extern-blocks \
     --sort-semantically \
-    --output nvEncodeAPI.rs ../headers/nvEncodeAPI.h
+    --dynamic-loading Encode \
+    --output nvEncodeAPI.rs ../headers/nvEncodeAPI.h -- -I/usr/local/cuda/include
 
 # Additional preludes to make sure the bindings compile.
 echo -e "use cudarc::driver::sys::*;\n$(cat cuviddec.rs)" > cuviddec.rs

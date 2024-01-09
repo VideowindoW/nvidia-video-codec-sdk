@@ -3,37 +3,14 @@
 use core::ffi::{c_int, c_void};
 
 use crate::sys::nvEncodeAPI::{
-    NvEncodeAPICreateInstance,
-    NvEncodeAPIGetMaxSupportedVersion,
-    GUID,
-    NVENCAPI_MAJOR_VERSION,
-    NVENCAPI_MINOR_VERSION,
-    NVENCSTATUS,
-    NV_ENCODE_API_FUNCTION_LIST,
-    NV_ENCODE_API_FUNCTION_LIST_VER,
-    NV_ENC_BUFFER_FORMAT,
-    NV_ENC_CAPS_PARAM,
-    NV_ENC_CREATE_BITSTREAM_BUFFER,
-    NV_ENC_CREATE_INPUT_BUFFER,
-    NV_ENC_CREATE_MV_BUFFER,
-    NV_ENC_CUSTREAM_PTR,
-    NV_ENC_EVENT_PARAMS,
-    NV_ENC_INITIALIZE_PARAMS,
-    NV_ENC_INPUT_PTR,
-    NV_ENC_LOCK_BITSTREAM,
-    NV_ENC_LOCK_INPUT_BUFFER,
-    NV_ENC_MAP_INPUT_RESOURCE,
-    NV_ENC_MEONLY_PARAMS,
-    NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS,
-    NV_ENC_OUTPUT_PTR,
-    NV_ENC_PIC_PARAMS,
-    NV_ENC_PRESET_CONFIG,
-    NV_ENC_RECONFIGURE_PARAMS,
-    NV_ENC_REGISTERED_PTR,
-    NV_ENC_REGISTER_RESOURCE,
-    NV_ENC_SEQUENCE_PARAM_PAYLOAD,
-    NV_ENC_STAT,
-    NV_ENC_TUNING_INFO,
+    Encode, GUID, NVENCAPI_MAJOR_VERSION, NVENCAPI_MINOR_VERSION, NVENCSTATUS,
+    NV_ENCODE_API_FUNCTION_LIST, NV_ENCODE_API_FUNCTION_LIST_VER, NV_ENC_BUFFER_FORMAT,
+    NV_ENC_CAPS_PARAM, NV_ENC_CREATE_BITSTREAM_BUFFER, NV_ENC_CREATE_INPUT_BUFFER,
+    NV_ENC_CREATE_MV_BUFFER, NV_ENC_CUSTREAM_PTR, NV_ENC_EVENT_PARAMS, NV_ENC_INITIALIZE_PARAMS,
+    NV_ENC_INPUT_PTR, NV_ENC_LOCK_BITSTREAM, NV_ENC_LOCK_INPUT_BUFFER, NV_ENC_MAP_INPUT_RESOURCE,
+    NV_ENC_MEONLY_PARAMS, NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS, NV_ENC_OUTPUT_PTR,
+    NV_ENC_PIC_PARAMS, NV_ENC_PRESET_CONFIG, NV_ENC_RECONFIGURE_PARAMS, NV_ENC_REGISTERED_PTR,
+    NV_ENC_REGISTER_RESOURCE, NV_ENC_SEQUENCE_PARAM_PAYLOAD, NV_ENC_STAT, NV_ENC_TUNING_INFO,
 };
 
 lazy_static! {
@@ -125,7 +102,6 @@ type GetSequenceParamEx = unsafe extern "C" fn(
 /// An instance of the `NvEncodeAPI` interface, containing function pointers
 /// which should be used to interface with the rest of the Encoder API.
 #[allow(dead_code, missing_docs)]
-#[derive(Debug, Clone)]
 pub struct EncodeAPI {
     #[doc(alias = "NvEncOpenEncodeSession")]
     pub open_encode_session: OpenEncodeSession,
@@ -207,6 +183,7 @@ pub struct EncodeAPI {
     pub get_last_error_string: GetLastErrorString,
     #[doc(alias = "NvEncSetIOCudaStreams")]
     pub set_io_cuda_streams: SetIOCudaStreams,
+    pub _library: Encode,
 }
 
 fn assert_versions_match(max_supported_version: u32) {
@@ -222,10 +199,14 @@ impl EncodeAPI {
     fn new() -> Self {
         const MSG: &str = "The API instance should populate the whole function list.";
 
+        let library = unsafe {
+            Encode::new("libnvidia-encode.so.1").expect("Could not find nvidia encoding library")
+        };
+
         // Check that the driver max supported version matches the version
         // from the header files. If they do not match, the bindings should be updated.
         let mut version = 0;
-        unsafe { NvEncodeAPIGetMaxSupportedVersion(&mut version) }
+        unsafe { library.NvEncodeAPIGetMaxSupportedVersion(&mut version) }
             .result_without_string()
             .expect("The pointer to the version should be valid.");
         assert_versions_match(version);
@@ -236,7 +217,7 @@ impl EncodeAPI {
             ..Default::default()
         };
         // Create Encode API Instance (populate function buffer).
-        unsafe { NvEncodeAPICreateInstance(&mut function_list) }
+        unsafe { library.NvEncodeAPICreateInstance(&mut function_list) }
             .result_without_string()
             .expect("The pointer to the function list should be valid.");
 
@@ -281,6 +262,7 @@ impl EncodeAPI {
             run_motion_estimation_only: function_list.nvEncRunMotionEstimationOnly.expect(MSG),
             get_last_error_string: function_list.nvEncGetLastErrorString.expect(MSG),
             set_io_cuda_streams: function_list.nvEncSetIOCudaStreams.expect(MSG),
+            _library: library,
         }
     }
 }
